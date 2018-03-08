@@ -9,6 +9,7 @@ name = "pypi"
 
 tensorflow = "*"
 pylint = "*"
+tensorboard = "*"
 
 
 [dev-packages]
