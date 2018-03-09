@@ -7,9 +7,9 @@ name = "pypi"
 
 [packages]
 
-tensorflow = "*"
 pylint = "*"
 tensorboard = "*"
+tensorflow-gpu = "*"
 
 
 [dev-packages]

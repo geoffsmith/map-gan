@@ -83,7 +83,8 @@ def main():
 
     Z = tf.random_normal(shape=(batch_size, 128))
     # Z = tf.placeholder(tf.float32, shape=(None, 128))
-    # X = tf.placeholder(tf.float32, shape=(None, 32, 32, channels))
+    # X = tf.placeholde(tf.float32, shape=(None, 32, 32, channels))
+    # with tf.device('/gpu:0'):
     gen = generator.generator(Z, channels=channels)
     print('gen shape', gen)
     real_dis = discriminator.discriminator(X_train)
@@ -92,18 +93,18 @@ def main():
     g_loss, g_train = generator.train(gen)
     print([x.name for x in tf.global_variables()])
 
-    with tf.Session() as sess:
+    with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
         writer = tf.summary.FileWriter('logs', sess.graph)
         init = tf.global_variables_initializer()
         sess.run(init)
         sess.run(iterator.initializer)
 
-        for epoch in range(100):
-            print(f'Epoch {epoch}')
+        for epoch in range(10_000):
             # z = np.random.normal(size=(batch_size, 128))
             d_train_v, d_loss_v = sess.run((d_train, d_loss))
             g_train_v, g_loss_v = sess.run((g_train, g_loss))
-            print(f'D Train: {d_train_v}, loss: {d_loss_v}\tG loss: {g_loss_v}')
+            if epoch % 100 == 0:
+                print(f'Epoch: {epoch}\tD Train: {d_train_v}, loss: {d_loss_v}\tG loss: {g_loss_v}')
 
         writer.close()
 
