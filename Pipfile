@@ -10,6 +10,7 @@ name = "pypi"
 pylint = "*"
 tensorboard = "*"
 tensorflow-gpu = "*"
+scikit-image = "*"
 
 
 [dev-packages]

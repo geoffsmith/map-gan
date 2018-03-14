@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from dcgan import generator
 from dcgan import discriminator
+from util.image import save_image
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -41,70 +42,50 @@ def cnn_model_fn(X_train, Y_train, mode):
     train = optimiser.minimize(loss)
     return train, loss
 
-    # predictions = {
-    #     'classes': tf.argmax(input=logits, axis=1),
-    #     'probabilities': tf.nn.softmax(logits, name='softmax_tensor')
-    # }
-
-    # if mode == tf.estimator.ModeKeys.PREDICT:
-    #     return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
-
-    # loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
-
-    # if mode == tf.estimator.ModeKeys.TRAIN:
-    #     optimiser = tf.train.GradientDescentOptimizer(learning_rate=0.001)
-    #     train_op = optimiser.minimize(
-    #         loss=loss,
-    #         global_step=tf.train.get_global_step()
-    #     )
-    #     return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
-
-    # eval_metric_ops = {
-    #     'accuracy': tf.metrics.accuracy(labels=labels, predictions=predictions['classes'])
-    # }
-
-    # return tf.estimator.EstimatorSpec(mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
-
 
 def main():
     batch_size = 32
     channels = 1
     mnist = tf.contrib.learn.datasets.load_dataset('mnist')
     train_data = mnist.train.images
+    print(np.min(train_data), np.max(train_data))
     train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
     # eval_data = mnist.test.images
     # eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
     dataset = tf.data.Dataset.from_tensor_slices((train_data, train_labels))
-    iterator = dataset.shuffle(buffer_size=10000).batch(batch_size).repeat().make_initializable_iterator()
+    iterator = dataset.shuffle(buffer_size=10000).apply(tf.contrib.data.batch_and_drop_remainder(batch_size)).repeat().make_initializable_iterator()
     X_train, Y_train = iterator.get_next()
     X_train = tf.reshape(X_train, shape=(-1, 28, 28, channels))
 
     print('X_Train', X_train.shape)
 
     Z = tf.random_normal(shape=(batch_size, 128))
-    # Z = tf.placeholder(tf.float32, shape=(None, 128))
-    # X = tf.placeholde(tf.float32, shape=(None, 32, 32, channels))
-    # with tf.device('/gpu:0'):
     gen = generator.generator(Z, channels=channels)
     print('gen shape', gen)
     real_dis = discriminator.discriminator(X_train)
     fake_dis = discriminator.discriminator(gen)
     d_loss, d_train = discriminator.train(real_dis, fake_dis)
-    g_loss, g_train = generator.train(gen)
+    g_loss, g_train = generator.train(fake_dis)
     print([x.name for x in tf.global_variables()])
 
-    with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
+    with tf.Session(config=tf.ConfigProto(log_device_placement=False)) as sess:
         writer = tf.summary.FileWriter('logs', sess.graph)
         init = tf.global_variables_initializer()
         sess.run(init)
         sess.run(iterator.initializer)
 
         for epoch in range(10_000):
-            # z = np.random.normal(size=(batch_size, 128))
             d_train_v, d_loss_v = sess.run((d_train, d_loss))
             g_train_v, g_loss_v = sess.run((g_train, g_loss))
-            if epoch % 100 == 0:
+
+            if epoch % 1000 == 0:
                 print(f'Epoch: {epoch}\tD Train: {d_train_v}, loss: {d_loss_v}\tG loss: {g_loss_v}')
+
+            if epoch % 1000 == 0:
+                gen_images = sess.run(gen)[:16]
+                print(f'Generated images: {gen_images.shape}')
+                save_image(epoch, gen_images)
+
 
         writer.close()
 
