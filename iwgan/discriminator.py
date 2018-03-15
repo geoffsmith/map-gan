@@ -14,19 +14,15 @@ def discriminator(X):
         x = tf.reshape(x, shape=(-1, 64 * 6 * 6))
         x = tf.layers.dense(x, units=1)
 
-        # x = tf.nn.sigmoid(x)
         return x
 
 
-def train(real_dis, fake_dis, penalty_dis, lmda, X):
-    penalty_gradients = tf.gradients(penalty_dis, X)
-    print('penalty gradients', penalty_gradients)
-    print('penalty_gradients shape', penalty_gradients[0].shape)
+def train(real_dis, fake_dis, penalty_dis, lmda, penalty_X, lr, beta1, beta2):
+    penalty_gradients = tf.gradients(penalty_dis, penalty_X)
     norm = tf.norm(penalty_gradients[0], axis=(1, 2))
-    print('norm shape', norm.shape)
-    print('fake', fake_dis.shape, 'real', real_dis.shape)
     loss = tf.reduce_mean(fake_dis - real_dis + lmda * tf.pow(norm - 1, 2))
-    optimiser = tf.train.AdamOptimizer(0.0002, beta1=0.5).minimize(loss, var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "discriminator"))
+    optimiser = tf.train.AdamOptimizer(lr, beta1=beta1, beta2=beta2)\
+        .minimize(loss, var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "discriminator"))
     return loss, optimiser
 
 
