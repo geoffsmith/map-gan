@@ -3,12 +3,14 @@ import numpy as np
 import tensorflow as tf
 from dcgan import generator
 from dcgan import discriminator
+from dcgan import gradient_penalty
 from util.image import save_image
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
 def main():
+    critic_iterations = 5
     batch_size = 32
     channels = 1
     mnist = tf.contrib.learn.datasets.load_dataset('mnist')
@@ -23,13 +25,13 @@ def main():
     gen = generator.generator(Z, channels=channels)
     real_dis = discriminator.discriminator(X_train)
     fake_dis = discriminator.discriminator(gen)
-    d_loss, d_train = discriminator.train(real_dis, fake_dis)
+    penalty_dis = discriminator.discriminator(gradient_penalty.gradient_penalty(X_train, gen))
+    d_loss, d_train = discriminator.train(real_dis, fake_dis, penalty_dis, 10, X_train)
     g_loss, g_train = generator.train(fake_dis)
     tf.summary.scalar('Discriminator loss', d_loss)
     tf.summary.scalar('Generator loss', g_loss)
     tf.summary.image('Samples', gen[:16], max_outputs=16)
     summaries = tf.summary.merge_all()
-    print([x.name for x in tf.global_variables()])
 
     with tf.Session(config=tf.ConfigProto(log_device_placement=False)) as sess:
         writer = create_filewriter(sess)
@@ -38,15 +40,16 @@ def main():
         sess.run(iterator.initializer)
 
         for epoch in range(10_000):
-            d_train_v, d_loss_v = sess.run((d_train, d_loss))
+            for _ in range(critic_iterations):
+                d_train_v, d_loss_v = sess.run((d_train, d_loss))
             g_train_v, g_loss_v = sess.run((g_train, g_loss))
 
-            if epoch % 10 == 0:
+            if epoch % 1000 == 0:
                 print(f'Epoch: {epoch}\tD loss: {d_loss_v}\tG loss: {g_loss_v}')
                 summary = sess.run(summaries)
                 writer.add_summary(summary, epoch)
 
-            if epoch % 1000 == 0:
+            if epoch % 10000 == 0:
                 gen_images = sess.run(gen)[:16]
                 print(f'Generated images: {gen_images.shape}')
                 save_image(epoch, gen_images)

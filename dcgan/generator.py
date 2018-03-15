@@ -20,6 +20,6 @@ def generator(z, channels=3):
         return x
 
 def train(gen):
-    loss = tf.reduce_mean(tf.log(1.0 - gen))
+    loss = tf.reduce_mean(-1 * gen)
     optimiser = tf.train.AdamOptimizer(0.0002, beta1=0.5).minimize(loss, var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "generator"))
     return loss, optimiser
