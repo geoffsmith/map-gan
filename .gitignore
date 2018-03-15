@@ -1,0 +1,6 @@
+.DS_Store
+MNIST-data
+__pycache__
+logs
+progress
+tmp
