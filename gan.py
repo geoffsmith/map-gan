@@ -5,6 +5,7 @@ from iwgan import generator
 from iwgan import discriminator
 from iwgan import gradient_penalty
 from util.image import save_image
+from util.data import get_training_data
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -12,7 +13,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 def main():
     critic_iterations = 5
     batch_size = 32
-    channels = 1
+    channels = 3
     lr = 0.0001
     beta1 = 0
     beta2 = 0.9
@@ -66,17 +67,6 @@ def main():
 def create_filewriter(sess):
     path = datetime.now().strftime('%Y%m%d_%H%M')
     return tf.summary.FileWriter(f'logs/{path}/', sess.graph)
-
-
-def get_training_data(batch_size, channels):
-    mnist = tf.contrib.learn.datasets.load_dataset('mnist')
-    train_data = mnist.train.images
-    train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
-    dataset = tf.data.Dataset.from_tensor_slices((train_data, train_labels))
-    iterator = dataset.shuffle(buffer_size=10000).apply(tf.contrib.data.batch_and_drop_remainder(batch_size)).repeat().make_initializable_iterator()
-    X_train, _ = iterator.get_next()
-    X_train = tf.reshape(X_train, shape=(-1, 28, 28, channels))
-    return X_train, iterator
 
 
 def create_summaries(d_loss, g_loss, gen):
