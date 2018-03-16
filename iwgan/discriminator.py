@@ -1,17 +1,21 @@
 import numpy as np
 import tensorflow as tf
 
-def discriminator(X):
+def discriminator(X, dim=64, kernel_size=5):
     with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
-        x = tf.layers.conv2d(X, 32, kernel_size=3, strides=1)
-        x = tf.nn.relu(tf.layers.batch_normalization(x))
-        x = tf.layers.max_pooling2d(x, pool_size=2, strides=2, padding='same')
+        x = tf.layers.conv2d(X, dim, kernel_size=kernel_size, strides=1, padding='same')
+        x = tf.nn.leaky_relu(x)
+        x = tf.layers.max_pooling2d(x, pool_size=2, strides=2, padding='same') # 14 x 14
 
-        x = tf.layers.conv2d(x, 64, kernel_size=3, strides=1)
-        x = tf.nn.relu(tf.layers.batch_normalization(x))
-        x = tf.layers.max_pooling2d(x, pool_size=2, strides=2, padding='same')
+        x = tf.layers.conv2d(x, dim * 2, kernel_size=kernel_size, strides=1, padding='same')
+        x = tf.nn.leaky_relu(x)
+        x = tf.layers.max_pooling2d(x, pool_size=2, strides=2, padding='same') # 7 x 7
+
+        x = tf.layers.conv2d(x, dim * 4, kernel_size=kernel_size, strides=1, padding='same')
+        x = tf.nn.leaky_relu(x)
+        x = tf.layers.max_pooling2d(x, pool_size=2, strides=2, padding='same') # 4 x 4
         
-        x = tf.reshape(x, shape=(-1, 64 * 6 * 6))
+        x = tf.reshape(x, shape=(-1, dim * 4 * 4 * 4))
         x = tf.layers.dense(x, units=1)
 
         return x
