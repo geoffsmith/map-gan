@@ -11,6 +11,7 @@ pylint = "*"
 tensorboard = "*"
 tensorflow-gpu = "*"
 scikit-image = "*"
+docopt = "*"
 
 
 [dev-packages]
