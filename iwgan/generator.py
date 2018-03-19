@@ -1,26 +1,55 @@
 import numpy as np
 import tensorflow as tf
 
-def generator(z, channels=3, dim=64, kernel_size=5):
+def generator(z, lod, alpha, channels=3):
+    dim = 32
     with tf.variable_scope('generator', reuse=tf.AUTO_REUSE):
-        start_resolution = 4
-        x = tf.layers.dense(inputs=z, units=start_resolution * start_resolution * 4 * dim, activation=tf.nn.relu)
-        x = tf.nn.relu(x)
-        x = tf.reshape(x, shape=(-1, start_resolution, start_resolution, 4 * dim))
+        x = tf.reshape(z, shape=(-1, 1, 1, 8 * dim))
+        x, out = layer(x, lod, alpha, 0, 8 * dim, channels)      # 8x8
+        x, out = layer(x, lod, alpha, 1, 4 * dim, channels, out) # 16 x 16
+        x, out = layer(x, lod, alpha, 2, 2 * dim, channels, out) # 32 x 32
+        x, out = layer(x, lod, alpha, 3, 1 * dim, channels, out) # 64 x 64
+        _, out = layer(x, lod, alpha, 4, 1 * dim, channels, out) # 64 x 64
+        out = tf.nn.sigmoid(out)
 
-        x = tf.layers.conv2d_transpose(inputs=x, filters=2 * dim, kernel_size=kernel_size, strides=2, padding='same') # 8 x 8
-        x = tf.nn.relu(tf.layers.batch_normalization(x))
+        return out
 
-        x = tf.layers.conv2d_transpose(inputs=x, filters=2 * dim, kernel_size=kernel_size, strides=2, padding='same') # 16 x 16
-        x = tf.nn.relu(tf.layers.batch_normalization(x))
-        
-        x = tf.layers.conv2d_transpose(inputs=x, filters=dim, kernel_size=kernel_size, strides=2, padding='same') # 32 x 32
-        x = tf.nn.relu(tf.layers.batch_normalization(x))
 
-        x = tf.layers.conv2d_transpose(inputs=x, filters=channels, kernel_size=kernel_size, strides=2, padding='same') # 64 x 64
-        x = tf.nn.sigmoid(tf.layers.batch_normalization(x))
+def layer(x, current_lod, alpha, lod, filters, channels, prev_rgb=None):
+    if lod == 0:
+        x = tf.layers.conv2d_transpose(inputs=x, filters=filters, kernel_size=4, strides=4, padding='same')
+        x = tf.nn.leaky_relu(x)
+        # x = conv_transpose(x, filters)
+        out = to_rgb(x, channels)
+        return x, out
+    else:
+        x = conv_transpose(x, filters)
+        rgb_new = to_rgb(x, channels)
+        out = combine(prev_rgb, rgb_new, current_lod, lod, alpha)
+        return x, out
 
-        return x
+
+def conv_transpose(x, filters):
+    x = tf.layers.conv2d_transpose(inputs=x, filters=filters, kernel_size=5, strides=2, padding='same')
+    x = tf.nn.leaky_relu(x)
+    return x
+
+
+def to_rgb(x, channels):
+    return tf.layers.conv2d_transpose(inputs=x, filters=channels, kernel_size=1, padding='same')
+
+
+def combine(old_rgb, new_rgb, current_lod, layer_lod, alpha):
+    new_size = tf.shape(new_rgb)[1:3]
+    upscale_old_rgb = tf.image.resize_images(old_rgb, new_size)
+    combine_old_new = upscale_old_rgb + alpha * (new_rgb - upscale_old_rgb)
+    x = tf.cond(layer_lod < current_lod,
+        lambda: upscale_old_rgb,
+        lambda: tf.cond(tf.equal(layer_lod, current_lod), lambda: combine_old_new, lambda: new_rgb)
+    )
+    return x
+
+
 
 def train(gen, lr, beta1, beta2):
     loss = tf.reduce_mean(-1 * gen)
