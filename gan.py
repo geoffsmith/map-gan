@@ -18,9 +18,9 @@ def main():
     beta1 = 0
     beta2 = 0.9
     lmbda = 10
-    epochs = 100_000
-    log_freq = 100
-    save_image_freq = 1_000
+    epochs = 500_000
+    log_freq = 1000
+    save_image_freq = 10_000
     Z_size = 128
 
     X_train, iterator = get_training_data(batch_size, channels)
