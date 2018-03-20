@@ -9,3 +9,8 @@ def get_weight(shape, gain=np.sqrt(2), use_wscale=False, fan_in=None):
         return tf.get_variable('weight', shape=shape, initializer=tf.initializers.random_normal()) * wscale
     else:
         return tf.get_variable('weight', shape=shape, initializer=tf.initializers.random_normal(0, std))
+        
+
+def pixel_norm(x):
+    with tf.variable_scope('PixelNorm'):
+        return x * tf.rsqrt(tf.reduce_mean(tf.square(x), axis=3, keep_dims=True) + 1e-8)

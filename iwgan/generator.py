@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from .layers import get_weight
+from .layers import get_weight, pixel_norm
 
 def generator(z, lod, alpha, channels=3):
     dim = 32
@@ -31,11 +31,13 @@ def layer(x, current_lod, alpha, layer_lod, filters, channels, prev_rgb=None):
         if layer_lod == 0:
             x = conv2d_transpose(x, kernel=4, strides=4, features=filters)
             x = tf.nn.leaky_relu(x)
+            x = pixel_norm(x)
             out = to_rgb(x, channels)
             return x, out
         else:
             x = conv2d_transpose(x, kernel=5, strides=2, features=filters)
             x = tf.nn.leaky_relu(x)
+            x = pixel_norm(x)
             rgb_new = to_rgb(x, channels)
             out = combine(prev_rgb, rgb_new, current_lod, layer_lod, alpha)
             return x, out
