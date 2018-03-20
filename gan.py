@@ -12,7 +12,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 
 def main():
-    critic_iterations = 5
+    critic_iterations = 1
     batch_size = 32
     channels = 3
     lr = 0.001

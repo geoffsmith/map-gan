@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from .layers import get_weight, pixel_norm
+from .layers import get_weight
 
 def discriminator(X, current_lod, alpha, dim=64, kernel_size=5):
     with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
@@ -13,11 +13,9 @@ def discriminator(X, current_lod, alpha, dim=64, kernel_size=5):
         with tf.variable_scope(f'last-conv', reuse=tf.AUTO_REUSE):
             x = conv2d(x, kernel=3, features=8 * dim)
             x = tf.nn.leaky_relu(x)
-            x = pixel_norm(x)
         with tf.variable_scope(f'last-conv-2', reuse=tf.AUTO_REUSE):
             x = conv2d(x, kernel=4, features=8 * dim, padding='VALID')
             x = tf.nn.leaky_relu(x)
-            x = pixel_norm(x)
         with tf.variable_scope(f'dense', reuse=tf.AUTO_REUSE):
             x = tf.reshape(x, shape=(-1, dim * 8 * 1 * 1))
             x = dense(x, units=1)
