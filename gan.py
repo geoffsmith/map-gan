@@ -22,8 +22,8 @@ def main():
     e_drift = 0.001
     epochs = 200_000
     lod_period = 25_000
-    log_freq = 10
-    save_image_freq = 1_000
+    log_freq = 300
+    save_image_freq = log_freq * 10
     Z_size = 256
 
     X_train, iterator = get_training_data(batch_size, channels)
