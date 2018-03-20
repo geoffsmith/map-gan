@@ -15,8 +15,8 @@ def generator(z, lod, alpha, channels=3):
         return out
 
 
-def layer(x, current_lod, alpha, lod, filters, channels, prev_rgb=None):
-    if lod == 0:
+def layer(x, current_lod, alpha, layer_lod, filters, channels, prev_rgb=None):
+    if layer_lod == 0:
         x = tf.layers.conv2d_transpose(inputs=x, filters=filters, kernel_size=4, strides=4, padding='same')
         x = tf.nn.leaky_relu(x)
         # x = conv_transpose(x, filters)
@@ -25,7 +25,7 @@ def layer(x, current_lod, alpha, lod, filters, channels, prev_rgb=None):
     else:
         x = conv_transpose(x, filters)
         rgb_new = to_rgb(x, channels)
-        out = combine(prev_rgb, rgb_new, current_lod, lod, alpha)
+        out = combine(prev_rgb, rgb_new, current_lod, layer_lod, alpha)
         return x, out
 
 
@@ -41,9 +41,9 @@ def to_rgb(x, channels):
 
 def combine(old_rgb, new_rgb, current_lod, layer_lod, alpha):
     new_size = tf.shape(new_rgb)[1:3]
-    upscale_old_rgb = tf.image.resize_images(old_rgb, new_size)
+    upscale_old_rgb = tf.image.resize_images(old_rgb, new_size, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
     combine_old_new = upscale_old_rgb + alpha * (new_rgb - upscale_old_rgb)
-    x = tf.cond(layer_lod < current_lod,
+    x = tf.cond(current_lod < layer_lod,
         lambda: upscale_old_rgb,
         lambda: tf.cond(tf.equal(layer_lod, current_lod), lambda: combine_old_new, lambda: new_rgb)
     )

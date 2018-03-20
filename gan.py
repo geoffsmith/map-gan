@@ -15,12 +15,12 @@ def main():
     critic_iterations = 5
     batch_size = 32
     channels = 3
-    lr = 0.0001
+    lr = 0.001
     beta1 = 0
-    beta2 = 0.9
+    beta2 = 0.99
     lmbda = 10
-    epochs = 100_000
-    log_freq = 100
+    epochs = 200_000
+    log_freq = 10
     save_image_freq = 1_000
     Z_size = 256
 
@@ -50,13 +50,14 @@ def main():
         for epoch in range(epochs):
             lod_val, alpha_val = schedule(epoch)
             feed = {lod: lod_val, alpha: alpha_val}
-            print(f'epoch: {epoch}, lod: {lod_val}, alpha: {alpha_val}')
+            #print(f'epoch: {epoch}, lod: {lod_val}, alpha: {alpha_val}')
             for _ in range(critic_iterations):
                 d_train_v, d_loss_v = sess.run((d_train, d_loss), feed_dict=feed)
             g_train_v, g_loss_v = sess.run((g_train, g_loss), feed_dict=feed)
 
             if epoch % log_freq == 0:
                 print(f'Epoch: {epoch}\tD loss: {d_loss_v}\tG loss: {g_loss_v}')
+                print(f'epoch: {epoch}, lod: {lod_val}, alpha: {alpha_val}')
                 summary = sess.run(summaries, feed_dict=feed)
                 writer.add_summary(summary, epoch)
 
@@ -72,10 +73,10 @@ def main():
 
 def schedule(epoch):
     # 500 train, 500 blend
-    lod_period = 5
+    lod_period = 9_000
     lod = math.floor(epoch / lod_period)
     alpha = (epoch % lod_period) / lod_period
-    alpha = max(0, epoch * 2 - 1)
+    alpha = min(1, alpha * 2)
     return lod, alpha
 
 
