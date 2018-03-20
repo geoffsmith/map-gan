@@ -31,10 +31,10 @@ def main():
 
     gen = generator.generator(Z, lod, alpha, channels=channels)
     print('gen shape', gen.shape)
-    real_dis = discriminator.discriminator(X_train, lod)
-    fake_dis = discriminator.discriminator(gen, lod)
+    real_dis = discriminator.discriminator(X_train, lod, alpha)
+    fake_dis = discriminator.discriminator(gen, lod, alpha)
     penalty_X = gradient_penalty.gradient_penalty(X_train, gen)
-    penalty_dis = discriminator.discriminator(penalty_X, lod)
+    penalty_dis = discriminator.discriminator(penalty_X, lod, alpha)
 
     d_loss, d_train = discriminator.train(real_dis, fake_dis, penalty_dis, lmbda, penalty_X, lr, beta1, beta2)
     g_loss, g_train = generator.train(fake_dis, lr, beta1, beta2)
