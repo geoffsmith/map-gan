@@ -44,7 +44,7 @@ def layer(x, current_lod, alpha, layer_lod, filters, channels, prev_rgb=None):
 
 
 def conv2d_transpose(x, kernel, strides, features):
-    w = get_weight([kernel, kernel, features, x.shape[-1].value], use_wscale=True)
+    w = get_weight([kernel, kernel, features, x.shape[-1].value], use_wscale=True, fan_in=(kernel**2)*x.shape[1].value)
     w = tf.cast(w, x.dtype)
     os = [tf.shape(x)[0], x.shape[1] * strides, x.shape[2] * strides, features]
     x = tf.nn.conv2d_transpose(x, w, os, strides=[1, strides, strides, 1], padding='SAME')

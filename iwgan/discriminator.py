@@ -55,7 +55,7 @@ def dense(x, units):
     with tf.variable_scope(f'weight', reuse=tf.AUTO_REUSE):
         w = get_weight([x.shape[1].value, units], use_wscale=True)
     with tf.variable_scope(f'bias', reuse=tf.AUTO_REUSE):
-        b = get_weight([units, 1], use_wscale=True)
+        b = get_weight([units, 1], use_wscale=False)
     w = tf.cast(w, x.dtype)
     b = tf.cast(b, x.dtype)
     return tf.matmul(x, w) + b
