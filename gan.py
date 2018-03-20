@@ -73,7 +73,7 @@ def main():
 
 def schedule(epoch):
     # 500 train, 500 blend
-    lod_period = 9_000
+    lod_period = 25_000
     lod = math.floor(epoch / lod_period)
     alpha = (epoch % lod_period) / lod_period
     alpha = min(1, alpha * 2)
