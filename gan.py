@@ -19,7 +19,9 @@ def main():
     beta1 = 0
     beta2 = 0.99
     lmbda = 10
+    e_drift = 0.001
     epochs = 200_000
+    lod_period = 25_000
     log_freq = 10
     save_image_freq = 1_000
     Z_size = 256
@@ -36,7 +38,7 @@ def main():
     penalty_X = gradient_penalty.gradient_penalty(X_train, gen)
     penalty_dis = discriminator.discriminator(penalty_X, lod, alpha)
 
-    d_loss, d_train = discriminator.train(real_dis, fake_dis, penalty_dis, lmbda, penalty_X, lr, beta1, beta2)
+    d_loss, d_train = discriminator.train(real_dis, fake_dis, penalty_dis, lmbda, penalty_X, lr, beta1, beta2, e_drift)
     g_loss, g_train = generator.train(fake_dis, lr, beta1, beta2)
 
     summaries = create_summaries(d_loss, g_loss, gen)
@@ -48,7 +50,7 @@ def main():
         sess.run(iterator.initializer)
 
         for epoch in range(epochs):
-            lod_val, alpha_val = schedule(epoch)
+            lod_val, alpha_val = schedule(epoch, lod_period)
             feed = {lod: lod_val, alpha: alpha_val}
             #print(f'epoch: {epoch}, lod: {lod_val}, alpha: {alpha_val}')
             for _ in range(critic_iterations):
@@ -71,9 +73,8 @@ def main():
     return
 
 
-def schedule(epoch):
+def schedule(epoch, lod_period):
     # 500 train, 500 blend
-    lod_period = 25_000
     lod = math.floor(epoch / lod_period)
     alpha = (epoch % lod_period) / lod_period
     alpha = min(1, alpha * 2)
