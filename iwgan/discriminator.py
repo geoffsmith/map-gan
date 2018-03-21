@@ -61,10 +61,10 @@ def dense(x, units):
     return tf.matmul(x, w) + b
 
 
-def train(real_dis, fake_dis, penalty_dis, lmda, penalty_X, lr, beta1, beta2):
+def train(real_dis, fake_dis, penalty_dis, lmda, penalty_X, lr, beta1, beta2, e_drift):
     penalty_gradients = tf.gradients(penalty_dis, penalty_X)
     norm = tf.norm(penalty_gradients[0], axis=(1, 2))
-    loss = tf.reduce_mean(fake_dis - real_dis + lmda * tf.pow(norm - 1, 2))
+    loss = tf.reduce_mean(fake_dis - real_dis + lmda * tf.pow(norm - 1, 2) + e_drift * tf.square(real_dis))
     optimiser = tf.train.AdamOptimizer(lr, beta1=beta1, beta2=beta2)\
         .minimize(loss, var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "discriminator"))
     return loss, optimiser
