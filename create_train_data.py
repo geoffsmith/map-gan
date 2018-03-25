@@ -26,7 +26,8 @@ def main():
 def create_train_data(input_dir, output_dir):
     files = glob(f'{input_dir}/*.tif')
     examples = chain(*(split_image(file) for file in files))
-    create_tfrecords(examples, output_dir)
+    examples = calculate_moments(examples)
+    # create_tfrecords(examples, output_dir)
     # i = 0
     # for example_chunk in grouper(5000, examples):
     #     create_train_data_out(example_chunk, output_dir, i)
@@ -63,7 +64,6 @@ def _int64_feature(value):
 def create_tfrecords(examples, dir):
     with tf.python_io.TFRecordWriter(f'{dir}/train.tfrecords') as writer:
         for example in examples:
-            print(np.min(example), np.max(example))
             height = example.shape[0]
             width = example.shape[1]
             raw = example.tostring()
@@ -83,6 +83,21 @@ def grouper(n, iterable):
        if not chunk:
            return
        yield chunk
+
+
+def calculate_moments(examples):
+    mean = 0
+    std = 0
+    k = 0
+    for example in examples:
+        for x in example.flatten():
+            k += 1 
+            old_mean = mean
+            mean = mean + (x - mean) / k
+            std = std + (x - mean) * (x - old_mean)
+        # yield example
+    print('mean', mean)
+    print('std', std / (k - 1))
 
 
 if __name__ == '__main__':

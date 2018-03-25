@@ -23,4 +23,5 @@ def decode(example):
     image = tf.decode_raw(features['image_raw'], tf.float64)
     image = tf.reshape(image, [64, 64, 3])
     image = tf.cast(image, tf.float32)
+    image = image * 2.0 - 1.0
     return image
