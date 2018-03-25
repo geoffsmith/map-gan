@@ -6,23 +6,22 @@ def discriminator(X, current_lod, alpha, dim=64, kernel_size=5):
     with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
         x = X
         tf.summary.histogram(f'x', x)
-        print('x', x.shape)
-        x, downsample = layer(None, x, 4, current_lod, alpha, dim, dim) # 32 x 32
-        print('x', x.shape)
-        x, downsample = layer(x, downsample, 3, current_lod, alpha, dim, 2 * dim) # 16 x 16
-        print('x', x.shape)
-        x, downsample = layer(x, downsample, 2, current_lod, alpha, 2 * dim, 4 * dim) # 8 x 8
-        print('x', x.shape)
-        x, downsample = layer(x, downsample, 1, current_lod, alpha, 4 * dim, 8 * dim) # 4 x 4
-        print('x', x.shape)
+        x, downsample = layer(None, x, 4, current_lod, alpha, dim, dim, bypass=True) # 32 x 32
+        x, downsample = layer(x, downsample, 3, current_lod, alpha, dim, 2 * dim, bypass=True) # 16 x 16
+        x, downsample = layer(x, downsample, 2, current_lod, alpha, 2 * dim, 4 * dim, bypass=True) # 8 x 8
+        x, downsample = layer(x, downsample, 1, current_lod, alpha, 4 * dim, 8 * dim, bypass=True) # 4 x 4
         x, _          = layer(x, downsample, 0, current_lod, alpha, 8 * dim, 8 * dim) # 4 x 4
-        print('x', x.shape)
 
         tf.summary.histogram(f'result', x)
         return x
 
 
-def layer(x, downsample, lod, current_lod, alpha, features_in, features_out):
+def layer(x, downsample, lod, current_lod, alpha, features_in, features_out, bypass=False):
+    if bypass:
+        with tf.variable_scope(f'Downsample', reuse=tf.AUTO_REUSE):
+            downsample = tf.layers.average_pooling2d(downsample, pool_size=2, strides=2)
+        return x, downsample
+
     with tf.variable_scope(f'layer-{lod}', reuse=tf.AUTO_REUSE):
         with tf.variable_scope(f'from_rgb', reuse=tf.AUTO_REUSE):
             from_rgb = tf.nn.leaky_relu(apply_bias(conv2d(downsample, 1, features_in)))

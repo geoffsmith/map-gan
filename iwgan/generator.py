@@ -7,17 +7,16 @@ def generator(z, lod, alpha, channels=3):
     with tf.variable_scope('generator', reuse=tf.AUTO_REUSE):
         x = z
         x, out = layer(x, lod, alpha, 0, 8 * dim, channels)      # 8x8
-        x, out = layer(x, lod, alpha, 1, 4 * dim, channels, out) # 16 x 16
-        x, out = layer(x, lod, alpha, 2, 2 * dim, channels, out) # 32 x 32
-        x, out = layer(x, lod, alpha, 3, 1 * dim, channels, out) # 64 x 64
-        _, out = layer(x, lod, alpha, 4, 1 * dim, channels, out) # 64 x 64
-        #out = tf.nn.sigmoid(out)
+        x, out = layer(x, lod, alpha, 1, 4 * dim, channels, out, bypass=True) # 16 x 16
+        x, out = layer(x, lod, alpha, 2, 2 * dim, channels, out, bypass=True) # 32 x 32
+        x, out = layer(x, lod, alpha, 3, 1 * dim, channels, out, bypass=True) # 64 x 64
+        _, out = layer(x, lod, alpha, 4, 1 * dim, channels, out, bypass=True) # 64 x 64
         tf.summary.histogram('generator out', out)
 
         return out
 
 
-def layer(x, current_lod, alpha, layer_lod, filters, channels, prev_rgb=None):
+def layer(x, current_lod, alpha, layer_lod, filters, channels, prev_rgb=None, bypass=False):
     with tf.variable_scope(f'lod-{layer_lod}', reuse=tf.AUTO_REUSE):
         if layer_lod == 0:
             x = pixel_norm(x, axis=1)
@@ -33,6 +32,9 @@ def layer(x, current_lod, alpha, layer_lod, filters, channels, prev_rgb=None):
             # tf.summary.histogram(f'out/rgb-{layer_lod}', out)
             return x, out
         else:
+            if bypass:
+                out = upscale2d(prev_rgb)
+                return x, out
             with tf.variable_scope(f'conv_up', reuse=tf.AUTO_REUSE):
                 x = conv2d_transpose(x, kernel=3, strides=2, features=filters)
                 x = pixel_norm(tf.nn.leaky_relu(apply_bias(x)))
@@ -76,10 +78,7 @@ def combine(old_rgb, new_rgb, current_lod, layer_lod, alpha):
     upscale_old_rgb = upscale2d(old_rgb)
     combine_old_new = upscale_old_rgb + alpha * (new_rgb - upscale_old_rgb)
     cond = current_lod < layer_lod
-    tf.summary.scalar('cond', tf.cast(cond, tf.int32))
     cond_equal = tf.equal(layer_lod, current_lod)
-    tf.summary.scalar('cond_equal', tf.cast(cond_equal, tf.int32))
-    tf.summary.scalar('alpha', alpha)
     x = tf.cond(cond,
         lambda: upscale_old_rgb,
         lambda: tf.cond(cond_equal, lambda: combine_old_new, lambda: new_rgb)

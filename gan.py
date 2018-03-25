@@ -21,8 +21,8 @@ def main():
     lmbda = 10
     e_drift = 0.001
     epochs = 200_000
-    lod_period = 50_000
-    log_freq = 1000
+    lod_period = 500_000
+    log_freq = 100
     save_image_freq = log_freq * 1
     Z_size = 256
 
