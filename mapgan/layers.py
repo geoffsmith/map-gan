@@ -6,9 +6,11 @@ def get_weight(shape, gain=np.sqrt(2), use_wscale=False, fan_in=None):
     std = gain / np.sqrt(fan_in) # He init
     if use_wscale:
         wscale = tf.constant(np.float32(std), name='wscale')
-        return tf.get_variable('weight', shape=shape, initializer=tf.initializers.random_normal()) * wscale
+        result = tf.get_variable('weight', shape=shape, initializer=tf.initializers.random_normal()) * wscale
     else:
-        return tf.get_variable('weight', shape=shape, initializer=tf.initializers.random_normal(0, std))
+        result = tf.get_variable('weight', shape=shape, initializer=tf.initializers.random_normal(0, std))
+    # tf.summary.histogram('weight', result)
+    return result
         
 
 def pixel_norm(x, axis=3):
@@ -18,6 +20,7 @@ def pixel_norm(x, axis=3):
 def apply_bias(x):
     b = tf.get_variable('bias', shape=[x.shape[-1]], initializer=tf.initializers.zeros())
     b = tf.cast(b, x.dtype)
+    # tf.summary.histogram('bias', b)
     if len(x.shape) == 2:
         return x + b
     else:
@@ -25,9 +28,9 @@ def apply_bias(x):
 
 
 def dense(x, units):
-    with tf.variable_scope(f'weight', reuse=tf.AUTO_REUSE):
+    with tf.variable_scope('weight', reuse=tf.AUTO_REUSE):
         w = get_weight([x.shape[1].value, units], use_wscale=True)
-    with tf.variable_scope(f'bias', reuse=tf.AUTO_REUSE):
+    with tf.variable_scope('bias', reuse=tf.AUTO_REUSE):
         b = get_weight([units, 1], use_wscale=False)
     w = tf.cast(w, x.dtype)
     return tf.matmul(x, w)
@@ -36,6 +39,5 @@ def dense(x, units):
 def conv2d(x, kernel, features, padding='SAME', use_wscale=True):
     w = get_weight([kernel, kernel, x.shape[-1].value, features], use_wscale=use_wscale)
     w = tf.cast(w, x.dtype)
-    # tf.summary.histogram('weight', w)
     x = tf.nn.conv2d(x, w, strides=[1,1,1,1], padding=padding)
     return x

@@ -1,23 +1,24 @@
 import numpy as np
 import tensorflow as tf
-from .layers import get_weight, pixel_norm, apply_bias, dense, conv2d
+from mapgan.layers import get_weight, pixel_norm, apply_bias, dense, conv2d
 
 def generator(z, lod, alpha, channels=3):
     dim = 32
     with tf.variable_scope('generator', reuse=tf.AUTO_REUSE):
         x = z
-        x, out = layer(x, lod, alpha, 0, 8 * dim, channels)      # 8x8
-        x, out = layer(x, lod, alpha, 1, 4 * dim, channels, out, bypass=True) # 16 x 16
-        x, out = layer(x, lod, alpha, 2, 2 * dim, channels, out, bypass=True) # 32 x 32
-        x, out = layer(x, lod, alpha, 3, 1 * dim, channels, out, bypass=True) # 64 x 64
-        _, out = layer(x, lod, alpha, 4, 1 * dim, channels, out, bypass=True) # 64 x 64
+        x, out = layer(x, lod, alpha, 0, 3 * dim, channels)      # 8x8
+        x, out = layer(x, lod, alpha, 1, 3 * dim, channels, out) # 16 x 16
+        x, out = layer(x, lod, alpha, 2, 2 * dim, channels, out, bypass=False) # 32 x 32
+        x, out = layer(x, lod, alpha, 3, 1 * dim, channels, out, bypass=False) # 64 x 64
+        _, out = layer(x, lod, alpha, 4, 1 * dim, channels, out, bypass=False) # 64 x 64
+        out = tf.nn.sigmoid(out)
         tf.summary.histogram('generator out', out)
 
         return out
 
 
 def layer(x, current_lod, alpha, layer_lod, filters, channels, prev_rgb=None, bypass=False):
-    with tf.variable_scope(f'lod-{layer_lod}', reuse=tf.AUTO_REUSE):
+    with tf.variable_scope('lod-' + str(layer_lod), reuse=tf.AUTO_REUSE):
         if layer_lod == 0:
             x = pixel_norm(x, axis=1)
             with tf.variable_scope('dense', reuse=tf.AUTO_REUSE):
@@ -27,22 +28,19 @@ def layer(x, current_lod, alpha, layer_lod, filters, channels, prev_rgb=None, by
             with tf.variable_scope('conv', reuse=tf.AUTO_REUSE):
                 x = conv2d(x, kernel=3, features=filters)
                 x = pixel_norm(tf.nn.leaky_relu(apply_bias(x)))
-            # tf.summary.histogram(f'gen-layer-{layer_lod}', x)
             out = to_rgb(x, channels)
-            # tf.summary.histogram(f'out/rgb-{layer_lod}', out)
             return x, out
         else:
             if bypass:
                 out = upscale2d(prev_rgb)
                 return x, out
-            with tf.variable_scope(f'conv_up', reuse=tf.AUTO_REUSE):
+            with tf.variable_scope('conv_up', reuse=tf.AUTO_REUSE):
                 x = conv2d_transpose(x, kernel=3, strides=2, features=filters)
                 x = pixel_norm(tf.nn.leaky_relu(apply_bias(x)))
-            with tf.variable_scope(f'conv', reuse=tf.AUTO_REUSE):
+            with tf.variable_scope('conv', reuse=tf.AUTO_REUSE):
                 x = conv2d(x, kernel=3, features=filters)
                 x = pixel_norm(tf.nn.leaky_relu(apply_bias(x)))
             rgb_new = to_rgb(x, channels)
-            # tf.summary.histogram(f'rgb', rgb_new)
             out = combine(prev_rgb, rgb_new, current_lod, layer_lod, alpha)
             return x, out
 
@@ -57,7 +55,7 @@ def conv2d_transpose(x, kernel, strides, features, gain=np.sqrt(2), use_wscale=T
 
 
 def to_rgb(x, channels):
-    with tf.variable_scope(f'to_rgb', reuse=tf.AUTO_REUSE):
+    with tf.variable_scope('to_rgb', reuse=tf.AUTO_REUSE):
         x = conv2d_transpose(x, kernel=1, strides=1, features=channels, gain=1)
         x = apply_bias(x)
         return x
@@ -76,7 +74,10 @@ def upscale2d(x, factor=2):
 
 def combine(old_rgb, new_rgb, current_lod, layer_lod, alpha):
     upscale_old_rgb = upscale2d(old_rgb)
-    combine_old_new = upscale_old_rgb + alpha * (new_rgb - upscale_old_rgb)
+    d = alpha * (new_rgb - upscale_old_rgb)
+    combine_old_new = upscale_old_rgb + d
+    # tf.summary.histogram('upscale_old_rgb', upscale_old_rgb)
+    # tf.summary.histogram('d', d)
     cond = current_lod < layer_lod
     cond_equal = tf.equal(layer_lod, current_lod)
     x = tf.cond(cond,
@@ -96,5 +97,5 @@ def train(gen, lr, beta1, beta2):
     # for g in grads:
     #     if g[1].name.startswith('generator'):
     #         print(g)
-    [tf.summary.histogram(f'gradients/{g[1].name}', g[0]) for g in grads if g[1].name.startswith('generator') and g[0] is not None]
+    # [tf.summary.histogram(f'gradients/{g[1].name}', g[0]) for g in grads if g[1].name.startswith('generator') and g[0] is not None]
     return loss, minimise

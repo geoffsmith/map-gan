@@ -1,6 +1,6 @@
 from skimage.util.montage import montage2d
 from skimage.io import imsave
-from .montage import montage
+from mapgan.montage import montage
 import numpy as np
 
 
