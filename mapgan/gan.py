@@ -21,12 +21,12 @@ def main(args):
     beta2 = 0.99
     lmbda = 10
     e_drift = 0.001
-    epochs = 300000
+    epochs = args.epochs
     lod_period = 50000
     log_freq = 1000
     save_image_freq = log_freq * 1
     Z_size = 256
-    job_dir = get_job_dir(args.job_dir)
+    job_dir = args.job_dir
     train_data_path = args.train_data
 
     std_mean = 0.9076
@@ -93,15 +93,9 @@ def schedule(epoch, lod_period):
     return lod, alpha
 
 
-def get_job_dir(arg_job_dir):
-    path = arg_job_dir
-    if arg_job_dir is None:
-        path = datetime.now().strftime('%Y%m%d_%H%M')
-        path = 'logs/' + path + '/'
-    return path
-
-
 def create_filewriter(sess, job_dir):
+    path = datetime.now().strftime('%Y%m%d_%H%M')
+    path = job_dir + '/logs/' + path + '/'
     return tf.summary.FileWriter(job_dir, sess.graph)
 
 
@@ -119,5 +113,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--job-dir')
     parser.add_argument('--train-data')
+    parser.add_argument('--epochs', default=300000)
     args = parser.parse_args()
     main(args)
