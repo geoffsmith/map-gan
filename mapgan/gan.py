@@ -26,12 +26,13 @@ def main(args):
     log_freq = 1000
     save_image_freq = log_freq * 1
     Z_size = 256
-    job_dir = args.job_dir
+    job_dir = get_job_dir(args.job_dir)
+    train_data_path = args.train_data
 
     std_mean = 0.9076
     std_std = 0.0235
 
-    X_train, iterator = get_training_data(batch_size, channels)
+    X_train, iterator = get_training_data(train_data_path, batch_size, channels)
     # X_train = (X_train - std_mean) / std_std
     Z = tf.random_normal(shape=(batch_size, Z_size))
     lod = tf.placeholder(tf.int32, shape=(), name='lod')
@@ -50,6 +51,8 @@ def main(args):
 
     summaries = create_summaries(d_loss, g_loss, gen, std_mean, std_std)
 
+    saver = tf.train.Saver()
+
     config = tf.ConfigProto(log_device_placement=False)
     # config.gpu_options.allow_growth = True
     with tf.Session(config=config) as sess:
@@ -61,14 +64,13 @@ def main(args):
         for epoch in range(epochs):
             lod_val, alpha_val = schedule(epoch, lod_period)
             feed = {lod: lod_val, alpha: alpha_val}
-            #print(f'epoch: {epoch}, lod: {lod_val}, alpha: {alpha_val}')
             for _ in range(critic_iterations):
                 d_train_v, d_loss_v = sess.run((d_train, d_loss), feed_dict=feed)
             g_train_v, g_loss_v = sess.run((g_train, g_loss), feed_dict=feed)
 
             if epoch % log_freq == 0 and epoch > 0:
-                print('Epoch:', epoch, 'D loss: ', d_loss_v, '\tG loss:', g_loss_v)
-                # print(f'epoch: {epoch}, lod: {lod_val}, alpha: {alpha_val}')
+                print('Epoch:', epoch, '\tD loss: ', d_loss_v, '\tG loss:', g_loss_v)
+                saver.save(sess, job_dir + '/checkpoints/model.ckpt', global_step=epoch)
                 summary = sess.run(summaries, feed_dict=feed)
                 writer.add_summary(summary, epoch)
 
@@ -91,12 +93,16 @@ def schedule(epoch, lod_period):
     return lod, alpha
 
 
-def create_filewriter(sess, job_dir):
-    path = job_dir
-    if job_dir is None:
+def get_job_dir(arg_job_dir):
+    path = arg_job_dir
+    if arg_job_dir is None:
         path = datetime.now().strftime('%Y%m%d_%H%M')
         path = 'logs/' + path + '/'
-    return tf.summary.FileWriter(path, sess.graph)
+    return path
+
+
+def create_filewriter(sess, job_dir):
+    return tf.summary.FileWriter(job_dir, sess.graph)
 
 
 def create_summaries(d_loss, g_loss, gen, std_mean, std_std):
@@ -112,5 +118,6 @@ if __name__ == '__main__':
     # tf.app.run()
     parser = argparse.ArgumentParser()
     parser.add_argument('--job-dir')
+    parser.add_argument('--train-data')
     args = parser.parse_args()
     main(args)

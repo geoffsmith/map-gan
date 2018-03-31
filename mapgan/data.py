@@ -1,9 +1,9 @@
 import tensorflow as tf
 
-def get_training_data(batch_size, channels):
+def get_training_data(train_data_path, batch_size, channels):
     # path = './data/train.tfrecords'
-    path = 'gs://map-gan/train.tfrecords'
-    x = tf.data.TFRecordDataset(path)
+    # path = 'gs://map-gan/train.tfrecords'
+    x = tf.data.TFRecordDataset(train_data_path)
     x = x.map(decode)
     iterator = x\
         .shuffle(buffer_size=10000)\
