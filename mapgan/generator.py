@@ -6,12 +6,12 @@ def generator(z, lod, alpha, channels=3):
     dim = 32
     with tf.variable_scope('generator', reuse=tf.AUTO_REUSE):
         x = z
-        x, out = layer(x, lod, alpha, 0, 3 * dim, channels)      # 8x8
-        x, out = layer(x, lod, alpha, 1, 3 * dim, channels, out) # 16 x 16
-        x, out = layer(x, lod, alpha, 2, 2 * dim, channels, out, bypass=False) # 32 x 32
-        x, out = layer(x, lod, alpha, 3, 1 * dim, channels, out, bypass=False) # 64 x 64
-        _, out = layer(x, lod, alpha, 4, 1 * dim, channels, out, bypass=False) # 64 x 64
-        out = tf.nn.sigmoid(out)
+        x, out = layer(x, lod, alpha, 0, 8 * dim, channels)      # 4x4
+        x, out = layer(x, lod, alpha, 1, 8 * dim, channels, out, bypass=False) # 8x8
+        x, out = layer(x, lod, alpha, 2, 4 * dim, channels, out, bypass=False) # 16x16
+        x, out = layer(x, lod, alpha, 3, 1 * dim, channels, out, bypass=False) # 32x32
+        _, out = layer(x, lod, alpha, 4, 1 * dim, channels, out, bypass=False) # 64x64
+        out = tf.nn.tanh(out)
         tf.summary.histogram('generator out', out)
 
         return out
@@ -90,7 +90,7 @@ def combine(old_rgb, new_rgb, current_lod, layer_lod, alpha):
 
 def train(gen, lr, beta1, beta2):
     loss = tf.reduce_mean(-1 * gen)
-    print('gen vars:', tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "generator"))
+    # print('gen vars:', tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "generator"))
     optimiser = tf.train.AdamOptimizer(lr, beta1=beta1, beta2=beta2)
     minimise = optimiser.minimize(loss, var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "generator"))
     grads = optimiser.compute_gradients(loss)

@@ -7,8 +7,5 @@ def gradient_penalty(X, gen):
     epsilon = tf.expand_dims(epsilon, axis=-1)
     epsilon = tf.expand_dims(epsilon, axis=-1)
     epsilon = tf.expand_dims(epsilon, axis=-1)
-    print('epsilon shape', epsilon.shape)
-    print('X', X.shape, ', gen', gen.shape)
     x = X * epsilon + gen * (1.0 - epsilon)
-    print('gradient penalty image shape', x.shape)
     return x
