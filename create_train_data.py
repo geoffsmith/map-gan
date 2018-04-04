@@ -3,12 +3,20 @@
 Create the training data from input tiff maps
 
 Usage:
-    create_train_data.py <input_dir> <output_dir>
+    create_train_data.py [options] <input_dir> <output_dir>
+
+Options:
+    --smooth        Apply gaussian smoothing
+    --greyscale     Convert images to greyscale
+    --debug         Write training examples to pngs and don't write tensorflow records
+    -n=<count>      Maximum number of examples
 """
 from docopt import docopt
 from glob import glob
 from skimage.io import imsave, imread
 from skimage.transform import resize
+from skimage.color import rgb2gray
+from skimage.filters import gaussian
 from skimage import img_as_float
 from itertools import islice, chain
 import numpy as np
@@ -20,18 +28,30 @@ TRAIN_IMG_SIZE = 64
 
 def main():
     arguments = docopt(__doc__)
-    create_train_data(arguments['<input_dir>'], arguments['<output_dir>'])
+    create_train_data(arguments['<input_dir>'], arguments['<output_dir>'], arguments)
 
 
-def create_train_data(input_dir, output_dir):
+def create_train_data(input_dir, output_dir, arguments):
     files = glob(f'{input_dir}/*.tif')
     examples = chain(*(split_image(file) for file in files))
-    examples = calculate_moments(examples)
-    # create_tfrecords(examples, output_dir)
-    # i = 0
-    # for example_chunk in grouper(5000, examples):
-    #     create_train_data_out(example_chunk, output_dir, i)
-    #     i += 1
+    # examples = calculate_moments(examples)
+    if arguments['--greyscale']:
+        examples = convert_greyscale(examples)
+    if arguments['--smooth']:
+        examples = apply_smoothing(examples)
+    if arguments['-n']:
+        examples = islice(examples, int(arguments['-n']))
+    if arguments['--debug']:
+        create_debug(examples, output_dir)
+    else:
+        create_tfrecords(examples, output_dir)
+
+
+def create_debug(examples, output_dir):
+    i = 0
+    for example in examples:
+        imsave(f'{output_dir}/{i}.png', example)
+        i += 1
 
 
 def split_image(file):
@@ -41,17 +61,6 @@ def split_image(file):
             sub_img = img[i:i + SUBIMAGE_SIZE, j:j + SUBIMAGE_SIZE].copy()
             yield resize(sub_img, (TRAIN_IMG_SIZE, TRAIN_IMG_SIZE), mode='constant', preserve_range=True)
 
-
-def create_train_data_out(examples, dir, i):
-    j = 0
-    for example in examples:
-        imsave(f'{dir}/{i}-{j}.png', example)
-        j += 1
-    # data = np.vstack([np.resize(example, (1, TRAIN_IMG_SIZE, TRAIN_IMG_SIZE, 3)) for example in examples])
-    # filename = f'{dir}/train_{i:03}.npy'
-    # print('Saving:', filename)
-    # np.save(filename, data)
-    
 
 def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
@@ -98,6 +107,17 @@ def calculate_moments(examples):
         # yield example
     print('mean', mean)
     print('std', std / (k - 1))
+
+
+def convert_greyscale(examples):
+    for example in examples:
+        yield rgb2gray(example)
+
+
+def apply_smoothing(examples):
+    for example in examples:
+        yield gaussian(example)
+
 
 
 if __name__ == '__main__':
