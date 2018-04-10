@@ -4,7 +4,7 @@ def get_training_data(train_data_path, batch_size, channels):
     # path = './data/train.tfrecords'
     # path = 'gs://map-gan/train.tfrecords'
     x = tf.data.TFRecordDataset(train_data_path)
-    x = x.map(decode)
+    x = x.map(lambda e: decode(e, channels))
     iterator = x\
         .shuffle(buffer_size=10000)\
         .apply(tf.contrib.data.batch_and_drop_remainder(batch_size))\
@@ -14,7 +14,7 @@ def get_training_data(train_data_path, batch_size, channels):
     return X_train, iterator
 
 
-def decode(example):
+def decode(example, channels):
     features = tf.parse_single_example(
         example,
         features={
@@ -23,7 +23,7 @@ def decode(example):
             'image_raw': tf.FixedLenFeature([], tf.string),
         })
     image = tf.decode_raw(features['image_raw'], tf.float64)
-    image = tf.reshape(image, [64, 64, 3])
+    image = tf.reshape(image, [64, 64, channels])
     image = tf.cast(image, tf.float32)
     image = image * 2.0 - 1.0
     return image

@@ -16,7 +16,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 def main(args):
     critic_iterations = 1
     batch_size = 32
-    channels = 3
+    channels = 1
     lr = 0.001
     beta1 = 0
     beta2 = 0.99
@@ -53,11 +53,19 @@ def main(args):
     config = tf.ConfigProto(log_device_placement=False)
     with tf.Session(config=config) as sess:
         writer = create_filewriter(sess, job_dir)
-        init = tf.global_variables_initializer()
-        sess.run(init)
+        if args.restore is None:
+            init = tf.global_variables_initializer()
+            sess.run(init)
+            first_epoch = 0
+        else:
+            checkpoint = tf.train.latest_checkpoint(checkpoint_path(job_dir))
+            print('checkpoint', checkpoint)
+            saver.restore(sess, checkpoint)
+            first_epoch = args.restore
+
         sess.run(iterator.initializer)
 
-        for epoch in range(epochs):
+        for epoch in range(first_epoch, epochs):
             lod_val, alpha_val = schedule(epoch, lod_period)
             feed = {lod: lod_val, alpha: alpha_val}
             for _ in range(critic_iterations):
@@ -66,7 +74,7 @@ def main(args):
 
             if epoch % log_freq == 0 and epoch > 0:
                 print('Epoch:', epoch, '\tD loss: ', d_loss_v, '\tG loss:', g_loss_v)
-                saver.save(sess, job_dir + '/checkpoints/model.ckpt', global_step=epoch)
+                saver.save(sess, checkpoint_prefix(job_dir), global_step=epoch)
                 summary = sess.run(summaries, feed_dict=feed)
                 writer.add_summary(summary, epoch)
 
@@ -77,6 +85,15 @@ def main(args):
         writer.close()
 
     return
+
+
+def checkpoint_path(job_dir):
+    return job_dir + 'checkpoints/'
+
+
+def checkpoint_prefix(job_dir):
+    return checkpoint_path(job_dir) + 'model.ckpt'
+
 
 
 def schedule(epoch, lod_period):
@@ -111,5 +128,6 @@ if __name__ == '__main__':
     parser.add_argument('--train-data')
     parser.add_argument('--epochs', default=300000, type=int)
     parser.add_argument('--save-image-freq', default=None, type=int)
+    parser.add_argument('--restore', default=None, type=int)
     args = parser.parse_args()
     main(args)
