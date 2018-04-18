@@ -6,11 +6,11 @@ def generator(z, lod, alpha, channels=3):
     dim = 32
     with tf.variable_scope('generator', reuse=tf.AUTO_REUSE):
         x = z
-        x, out = layer(x, lod, alpha, 0, 4 * dim, channels)      # 4x4
+        x, out = layer(x, lod, alpha, 0, 8 * dim, channels)      # 4x4
         x, out = layer(x, lod, alpha, 1, 4 * dim, channels, out, bypass=False) # 8x8
         x, out = layer(x, lod, alpha, 2, 2 * dim, channels, out, bypass=False) # 16x16
-        x, out = layer(x, lod, alpha, 3, 2 * dim, channels, out, bypass=False) # 32x32
-        _, out = layer(x, lod, alpha, 4, 2 * dim, channels, out, bypass=False) # 64x64
+        x, out = layer(x, lod, alpha, 3, 1 * dim, channels, out, bypass=False) # 32x32
+        _, out = layer(x, lod, alpha, 4, 1 * dim, channels, out, bypass=False) # 64x64
         out = tf.nn.tanh(out)
         tf.summary.histogram('generator out', out)
 

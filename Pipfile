@@ -1,18 +1,13 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 pylint = "*"
 tensorboard = "*"
-tensorflow-gpu = "*"
+tensorflow-gpu = "==1.6.0"
 scikit-image = "*"
 docopt = "*"
 
-
 [dev-packages]
-

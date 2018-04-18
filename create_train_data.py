@@ -13,6 +13,8 @@ Options:
 """
 from docopt import docopt
 from glob import glob
+import warnings
+import os.path
 from skimage.io import imsave, imread
 from skimage.transform import resize
 from skimage.color import rgb2gray
@@ -32,9 +34,8 @@ def main():
 
 
 def create_train_data(input_dir, output_dir, arguments):
-    files = glob(f'{input_dir}/*.tif')
+    files = glob(input_dir + '/*.tif')
     examples = chain(*(split_image(file) for file in files))
-    # examples = calculate_moments(examples)
     if arguments['--greyscale']:
         examples = convert_greyscale(examples)
     if arguments['--smooth']:
@@ -48,16 +49,20 @@ def create_train_data(input_dir, output_dir, arguments):
 
 
 def create_debug(examples, output_dir):
-    i = 0
-    for example in examples:
-        imsave(f'{output_dir}/{i}.png', example)
-        i += 1
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        i = 0
+        for example in examples:
+            path = os.path.join(output_dir, str(i) + '.png')
+            imsave(path, example)
+            i += 1
 
 
 def split_image(file):
+    print('Reading image', file)
     img = img_as_float(imread(file))
-    for i in range(0, 5000, SUBIMAGE_SIZE):
-        for j in range(0, 5000, SUBIMAGE_SIZE):
+    for i in range(0, 5000 - SUBIMAGE_SIZE, SUBIMAGE_SIZE):
+        for j in range(0, 5000 - SUBIMAGE_SIZE, SUBIMAGE_SIZE):
             sub_img = img[i:i + SUBIMAGE_SIZE, j:j + SUBIMAGE_SIZE].copy()
             yield resize(sub_img, (TRAIN_IMG_SIZE, TRAIN_IMG_SIZE), mode='constant', preserve_range=True)
 
@@ -71,7 +76,7 @@ def _int64_feature(value):
 
 
 def create_tfrecords(examples, dir):
-    with tf.python_io.TFRecordWriter(f'{dir}/train.tfrecords') as writer:
+    with tf.python_io.TFRecordWriter(dir + '/train.tfrecords') as writer:
         for example in examples:
             height = example.shape[0]
             width = example.shape[1]
@@ -92,21 +97,6 @@ def grouper(n, iterable):
        if not chunk:
            return
        yield chunk
-
-
-def calculate_moments(examples):
-    mean = 0
-    std = 0
-    k = 0
-    for example in examples:
-        for x in example.flatten():
-            k += 1 
-            old_mean = mean
-            mean = mean + (x - mean) / k
-            std = std + (x - mean) * (x - old_mean)
-        # yield example
-    print('mean', mean)
-    print('std', std / (k - 1))
 
 
 def convert_greyscale(examples):

@@ -10,4 +10,4 @@ def save_image(epoch, images):
     images = images * 2.0 - 1.0
     images = np.squeeze(images)
     image = montage(images, multichannel=True, padding_width=5)
-    imsave(f'progress/{epoch}.jpg', image)
+    imsave('progress/' + epoch + '.jpg', image)

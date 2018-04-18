@@ -7,11 +7,11 @@ def discriminator(X, current_lod, alpha):
     with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
         x = X
         tf.summary.histogram('x', x)
-        x, downsample = layer(None, x, 4, current_lod, alpha, 2 * dim, 2 * dim, bypass=False) # 64 x 64
-        x, downsample = layer(x, downsample, 3, current_lod, alpha, 2 * dim, 2 * dim, bypass=False) # 32 x 32
-        x, downsample = layer(x, downsample, 2, current_lod, alpha, 2 * dim, 2 * dim, bypass=False) # 16 x 16
+        x, downsample = layer(None, x, 4, current_lod, alpha, 1 * dim, 1 * dim, bypass=False) # 64 x 64
+        x, downsample = layer(x, downsample, 3, current_lod, alpha, 1 * dim, 1 * dim, bypass=False) # 32 x 32
+        x, downsample = layer(x, downsample, 2, current_lod, alpha, 1 * dim, 2 * dim, bypass=False) # 16 x 16
         x, downsample = layer(x, downsample, 1, current_lod, alpha, 2 * dim, 4 * dim, bypass=False) # 8 x 8 
-        x, _          = layer(x, downsample, 0, current_lod, alpha, 4 * dim, 4 * dim) # 4 x 4
+        x, _          = layer(x, downsample, 0, current_lod, alpha, 4 * dim, 8 * dim) # 4 x 4
 
         tf.summary.histogram('result', x)
         return x
